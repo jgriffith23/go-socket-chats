@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Go JS chat</title>
+  </head>
+  <body>
+    Put some places for people to type here. <br>
+    Probs also some JavaScript. React?<br>
+    Nahhhhhhhhhhhh. Script tags all the way for now! 
+
+    <ul id="messages"></ul>
+    <form id="in" action="">
+      Handle: <input id="user" />
+      <br>
+      Message: <input id="msg" autocomplete="off"/>
+      <button type="submit">Send</button>
+    </form>
+  <script>
+    console.log("Your script is running");
+    var chatSocket = new WebSocket(
+      "ws://localhost:8080/websocket",
+    );
+    chatSocket.onopen = function(evt) {
+      console.log("about to send a message");
+      const connectMsg = {
+        username: "connection alert",
+        message: "someone connected"
+      };
+      chatSocket.send(JSON.stringify(connectMsg));
+    }
+
+    function sendText(user, text) {
+        const message = {
+            "username": user,
+            "message": text
+        };
+        chatSocket.send(JSON.stringify(message));
+    }
+
+    document.getElementById("in").onsubmit = function(evt) {
+        evt.preventDefault();
+        const textBox = document.getElementById("msg");
+        const userName = document.getElementById("user");
+        sendText(userName.value, textBox.value);
+        textBox.value = "";
+    };
+
+    chatSocket.onmessage = function(evt) {
+        console.log(evt.data);
+    }
+
+  </script>
+  </body>
+</html>

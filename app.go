@@ -27,7 +27,6 @@ var upgrader = websocket.Upgrader{}
 // An object to contain user messages.
 // FIXME: Move type definitions out of server file?
 type Message struct {
-    Email string `json:"email"`
     Username string `json:"username"`
     Message string `json:"message"`
 }
@@ -37,12 +36,12 @@ type Message struct {
 
 func main() {
     // Simple file server. Serves HTML, CSS, JS.
-    fileServer := http.FileServer(http.Dir("../public"))
+    fileServer := http.FileServer(http.Dir("./templates"))
 
     // Homepage uses the file server.
     http.Handle("/", fileServer)
 
-    // Websocket connections will use a different server.
+    // Websocket connections will use a different server function.
     http.HandleFunc("/websocket", handleConnections)
 
     // A goroutine. Concurrent process. Passes messages from broadcast to
@@ -58,6 +57,7 @@ func main() {
 
 // Convert GET request into a web socket, register client,. 
 func handleConnections(res http.ResponseWriter, req *http.Request) {
+    log.Println("Got to start of handle connections")
     // Create connection.
     conn, err := upgrader.Upgrade(res, req, nil)
     if err != nil {
@@ -69,6 +69,7 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
 
     // Add new client
     clients[conn] = true
+    log.Println("user connected")
 
     // Golang note: Example of infinite loop syntax.
     for {
@@ -78,7 +79,7 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
         if err != nil {
             // An error in connection doesn't mean the server should crash.
             // Assume client disconnected and remove from registry.
-            log.Println("error: ", err)
+            log.Println("hc error: ", err)
             delete(clients, conn)
             break
         }
@@ -90,10 +91,13 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
 
 // Fetch messages from channel and send to all registered clients as JSON.
 func handleMessages() {
+    log.Println("Got to start of handle messages")
     // FIXME: Could this function take a channel as a parameter so that we don't
     // need a global?
     for {
-        msg := <-broadcast
+        msg := <- broadcast
+        log.Println("hm msg: ", msg)
+        msg.Message = msg.Message + " from go"
 
         // Golang note: range is a bit like range() in Python. Gets indices
         // for slices; gets key for maps.
@@ -101,7 +105,7 @@ func handleMessages() {
             err := client.WriteJSON(msg)
             if err != nil {
                 // Again, assume client disconnected if there's an error.
-                log.Println("error: ", err)
+                log.Println("hm error: ", err)
                 client.Close()
                 delete(clients, client)
             }
