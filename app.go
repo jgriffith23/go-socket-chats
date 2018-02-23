@@ -5,8 +5,11 @@
 package main
 
 import (
+    "html/template"
     "log"
     "net/http"
+    "github.com/getsentry/raven-go"
+    // "github.com/gorilla/sessions"
     "github.com/gorilla/websocket"
 )
 
@@ -31,15 +34,22 @@ type Message struct {
     Message string `json:"message"`
 }
 
+var templates *template.Template
+
+func init() {  
+    // Gather templates.
+    templates = template.Must(template.ParseGlob("templates/*.gohtml"))
+}
+
 // FIXME: Add custom functionality for logging, error handling, and template 
 // rendering.
 
 func main() {
     // Simple file server. Serves HTML, CSS, JS.
-    fileServer := http.FileServer(http.Dir("./templates"))
+    // fileServer := http.FileServer(http.Dir("templates"))
 
     // Homepage uses the file server.
-    http.Handle("/", fileServer)
+    http.HandleFunc("/", index)
 
     // Websocket connections will use a different server function.
     http.HandleFunc("/websocket", handleConnections)
@@ -55,12 +65,21 @@ func main() {
     }
 }
 
+func index(res http.ResponseWriter, req *http.Request) {
+    err := templates.ExecuteTemplate(res, "index.gohtml", nil)
+    if err != nil {
+        raven.CaptureErrorAndWait(err, nil)
+        log.Fatalln("index: ", err)
+    }
+}
+
 // Convert GET request into a web socket, register client,. 
 func handleConnections(res http.ResponseWriter, req *http.Request) {
     log.Println("Got to start of handle connections")
     // Create connection.
     conn, err := upgrader.Upgrade(res, req, nil)
     if err != nil {
+        raven.CaptureErrorAndWait(err, nil)
         log.Fatalln(err)
     }
 
@@ -79,7 +98,8 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
         if err != nil {
             // An error in connection doesn't mean the server should crash.
             // Assume client disconnected and remove from registry.
-            log.Println("hc error: ", err)
+            raven.CaptureErrorAndWait(err, nil)
+            log.Println("handleConnections: ", err)
             delete(clients, conn)
             break
         }
@@ -91,12 +111,11 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
 
 // Fetch messages from channel and send to all registered clients as JSON.
 func handleMessages() {
-    log.Println("Got to start of handle messages")
     // FIXME: Could this function take a channel as a parameter so that we don't
     // need a global?
     for {
         msg := <- broadcast
-        log.Println("hm msg: ", msg)
+        log.Println("handleMessages: ", msg)
         msg.Message = msg.Message + " from go"
 
         // Golang note: range is a bit like range() in Python. Gets indices
@@ -105,7 +124,8 @@ func handleMessages() {
             err := client.WriteJSON(msg)
             if err != nil {
                 // Again, assume client disconnected if there's an error.
-                log.Println("hm error: ", err)
+                raven.CaptureErrorAndWait(err, nil)
+                log.Println("handleMessages error: ", err)
                 client.Close()
                 delete(clients, client)
             }
