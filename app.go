@@ -1,4 +1,5 @@
 // A real-time chat application server
+
 // Following this tutorial:
 // https://scotch.io/bar-talk/build-a-realtime-chat-server-with-go-and-websockets
 
@@ -13,7 +14,7 @@ import (
     "github.com/gorilla/websocket"
 )
 
-// FIXME: Rework this code so that the variables don't have to be global.
+// FIXME: Rework this code so that the variables don't have to be global?
 
 // Connected clients.
 // Golang note: calling make() actually initializes the map in memory.
@@ -45,13 +46,8 @@ func init() {
 // rendering.
 
 func main() {
-    // Simple file server. Serves HTML, CSS, JS.
-    // fileServer := http.FileServer(http.Dir("templates"))
 
-    // Homepage uses the file server.
     http.HandleFunc("/", index)
-
-    // Websocket connections will use a different server function.
     http.HandleFunc("/websocket", handleConnections)
 
     // A goroutine. Concurrent process. Passes messages from broadcast to
@@ -65,6 +61,7 @@ func main() {
     }
 }
 
+// index serves the homepage.
 func index(res http.ResponseWriter, req *http.Request) {
     err := templates.ExecuteTemplate(res, "index.gohtml", nil)
     if err != nil {
@@ -73,7 +70,8 @@ func index(res http.ResponseWriter, req *http.Request) {
     }
 }
 
-// Convert GET request into a web socket, register client,. 
+// handleConnections converts a GET request into a web socket and 
+// registers a new client. 
 func handleConnections(res http.ResponseWriter, req *http.Request) {
     log.Println("Got to start of handle connections")
     // Create connection.
@@ -109,7 +107,8 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
     }
 }
 
-// Fetch messages from channel and send to all registered clients as JSON.
+// handleMessages fetches messages from the channel and sends them
+// to all registered clients as JSON.
 func handleMessages() {
     // FIXME: Could this function take a channel as a parameter so that we don't
     // need a global?
