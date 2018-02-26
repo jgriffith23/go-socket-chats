@@ -1,0 +1,11 @@
+body {
+    font-family: sans-serif;
+}
+
+#messages {
+    list-style-type: none;
+}
+
+#messages li:nth-child(odd) {
+    background: #ffe6ff;
+}
