@@ -89,6 +89,9 @@ func main() {
     http.Handle("/", viewHandler(index))
     http.HandleFunc("/websocket", handleConnections)
 
+    staticServer := http.FileServer(http.Dir("static"))
+    http.Handle("/static/", http.StripPrefix("/static/", staticServer))
+
     // A goroutine. Concurrent process. Passes messages from broadcast to
     // clients.
     go handleMessages()
