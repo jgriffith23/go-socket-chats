@@ -1,6 +1,6 @@
 // A real-time chat application server
 
-// Following this tutorial:
+// Originally derived from this tutorial:
 // https://scotch.io/bar-talk/build-a-realtime-chat-server-with-go-and-websockets
 
 package main
@@ -16,8 +16,8 @@ import (
 
 // FIXME: Rework this code so that the variables don't have to be global?
 
-// Connected clients.
 // Golang note: calling make() actually initializes the map in memory.
+// Connected clients.
 var clients = make(map[*websocket.Conn]bool)
 
 // A queue for messages sent by clients. Creates a Go channel, which
@@ -28,8 +28,8 @@ var broadcast = make(chan Message)
 // FIXME: Write a CheckOrigin function for the Upgrader.
 var upgrader = websocket.Upgrader{}
 
-// An object to contain user messages.
 // FIXME: Move type definitions out of server file?
+// An object to contain user messages.
 type Message struct {
     Username string `json:"username"`
     Message string `json:"message"`
@@ -37,9 +37,48 @@ type Message struct {
 
 var templates *template.Template
 
-func init() {  
+func init() { 
+ 
     // Gather templates.
     templates = template.Must(template.ParseGlob("templates/*.gohtml"))
+}
+
+type augError struct {
+    Error error
+    Message string
+    Code int
+}
+
+//////////////////////////////////////////////////////////////
+// Custom server. Log errors with Sentry and render templates.
+//////////////////////////////////////////////////////////////
+
+// Wrap handler functions to add custom actions for any request that
+// should return a view.
+
+type viewHandler func(http.ResponseWriter, *http.Request) (ae *augError, tpl string)
+func (fn viewHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+    augErr, template := fn(res, req)
+    if augErr != nil {
+        http.Error(
+            res,
+            augErr.Message,
+            augErr.Code,
+        )
+        raven.CaptureErrorAndWait(augErr.Error, nil)
+        return
+    }
+
+    err := templates.ExecuteTemplate(res, template, nil)
+    if err != nil {
+        http.Error(
+            res,
+            "Page could not be displayed.",
+            http.StatusInternalServerError,
+        )
+        raven.CaptureErrorAndWait(err, nil)
+        return
+    }
 }
 
 // FIXME: Add custom functionality for logging, error handling, and template 
@@ -47,7 +86,7 @@ func init() {
 
 func main() {
 
-    http.HandleFunc("/", index)
+    http.Handle("/", viewHandler(index))
     http.HandleFunc("/websocket", handleConnections)
 
     // A goroutine. Concurrent process. Passes messages from broadcast to
@@ -62,18 +101,14 @@ func main() {
 }
 
 // index serves the homepage.
-func index(res http.ResponseWriter, req *http.Request) {
-    err := templates.ExecuteTemplate(res, "index.gohtml", nil)
-    if err != nil {
-        raven.CaptureErrorAndWait(err, nil)
-        log.Fatalln("index: ", err)
-    }
+func index(res http.ResponseWriter, req *http.Request) (ae *augError, tpl string) {
+    return nil, "index.gohtml"
 }
 
 // handleConnections converts a GET request into a web socket and 
 // registers a new client. 
 func handleConnections(res http.ResponseWriter, req *http.Request) {
-    log.Println("Got to start of handle connections")
+
     // Create connection.
     conn, err := upgrader.Upgrade(res, req, nil)
     if err != nil {
@@ -90,14 +125,15 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
 
     // Golang note: Example of infinite loop syntax.
     for {
+
         // Extract message JSON into a struct
         var msg Message
         err := conn.ReadJSON(&msg)
         if err != nil {
+
             // An error in connection doesn't mean the server should crash.
             // Assume client disconnected and remove from registry.
             raven.CaptureErrorAndWait(err, nil)
-            log.Println("handleConnections: ", err)
             delete(clients, conn)
             break
         }
@@ -110,6 +146,7 @@ func handleConnections(res http.ResponseWriter, req *http.Request) {
 // handleMessages fetches messages from the channel and sends them
 // to all registered clients as JSON.
 func handleMessages() {
+
     // FIXME: Could this function take a channel as a parameter so that we don't
     // need a global?
     for {
@@ -119,9 +156,11 @@ func handleMessages() {
 
         // Golang note: range is a bit like range() in Python. Gets indices
         // for slices; gets key for maps.
+
         for client := range clients {
             err := client.WriteJSON(msg)
             if err != nil {
+
                 // Again, assume client disconnected if there's an error.
                 raven.CaptureErrorAndWait(err, nil)
                 log.Println("handleMessages error: ", err)

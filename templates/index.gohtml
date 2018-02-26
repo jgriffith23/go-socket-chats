@@ -15,9 +15,10 @@
       Message: <input id="msg" autocomplete="off"/>
       <button type="submit">Send</button>
     </form>
+
   <script>
     console.log("Your script is running");
-    var chatSocket = new WebSocket(
+    const chatSocket = new WebSocket(
       "ws://localhost:8080/websocket",
     );
     chatSocket.onopen = function(evt) {
