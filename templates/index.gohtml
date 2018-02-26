@@ -3,6 +3,7 @@
   <head>
     <title>Go JS chat</title>
     <link rel="stylesheet" type="text/css" href="static/css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.5.2/randomColor.min.js"></script>
   </head>
   <body>
     Put some places for people to type here. <br>
@@ -19,6 +20,7 @@
     <ul id="messages"></ul>
 
     <script>
+      const users = new Map();
       const chatSocket = new WebSocket(
         "ws://localhost:8080/websocket",
       );
@@ -49,6 +51,13 @@
             const msgHTML = document.createElement("li");
 
             msgHTML.innerHTML = `${newMsg.username}: ${newMsg.message}`;
+
+            if (users.get(newMsg.username) === undefined) {
+                users.set(newMsg.username, randomColor({luminosity: 'light'}));
+            }
+
+            msgHTML.style.background = users.get(newMsg.username);
+
             messages.append(msgHTML);
           }
       }
