@@ -16,40 +16,40 @@
       <button type="submit">Send</button>
     </form>
 
-  <script>
-    console.log("Your script is running");
-    const chatSocket = new WebSocket(
-      "ws://localhost:8080/websocket",
-    );
-    chatSocket.onopen = function(evt) {
-      console.log("about to send a message");
-      const connectMsg = {
-        username: "connection alert",
-        message: "someone connected"
-      };
-      chatSocket.send(JSON.stringify(connectMsg));
-    }
+    <script>
+      const chatSocket = new WebSocket(
+        "ws://localhost:8080/websocket",
+      );
 
-    function sendText(user, text) {
-        const message = {
-            "username": user,
-            "message": text
+      function sendText(user, text) {
+          const message = {
+              "username": user,
+              "message": text
+          };
+          chatSocket.send(JSON.stringify(message));
+      }
+
+      chatSocket.onopen = function(evt) {
+        console.log("Opened connection!");
+        const connectMsg = {
+          username: "",
+          message: "new connection"
         };
-        chatSocket.send(JSON.stringify(message));
-    }
+        chatSocket.send(JSON.stringify(connectMsg));
+      }
 
-    document.getElementById("in").onsubmit = function(evt) {
-        evt.preventDefault();
-        const textBox = document.getElementById("msg");
-        const userName = document.getElementById("user");
-        sendText(userName.value, textBox.value);
-        textBox.value = "";
-    };
+      chatSocket.onmessage = function(evt) {
+          console.log(evt.data);
+      }
 
-    chatSocket.onmessage = function(evt) {
-        console.log(evt.data);
-    }
+      document.getElementById("in").onsubmit = function(evt) {
+          evt.preventDefault();
+          const textBox = document.getElementById("msg");
+          const userName = document.getElementById("user");
+          sendText(userName.value, textBox.value);
+          textBox.value = "";
+      };
 
-  </script>
+    </script>
   </body>
 </html>
