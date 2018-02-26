@@ -38,7 +38,7 @@ type Message struct {
 var templates *template.Template
 
 func init() { 
- 
+
     // Gather templates.
     templates = template.Must(template.ParseGlob("templates/*.gohtml"))
 }
@@ -152,7 +152,6 @@ func handleMessages() {
     for {
         msg := <- broadcast
         log.Println("handleMessages: ", msg)
-        msg.Message = msg.Message + " from go"
 
         // Golang note: range is a bit like range() in Python. Gets indices
         // for slices; gets key for maps.

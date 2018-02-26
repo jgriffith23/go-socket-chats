@@ -9,8 +9,9 @@
     Nahhhhhhhhhhhh. Script tags all the way for now! 
 
     <ul id="messages"></ul>
+
     <form id="in" action="">
-      Handle: <input id="user" />
+      Handle: <input id="user"/>
       <br>
       Message: <input id="msg" autocomplete="off"/>
       <button type="submit">Send</button>
@@ -40,6 +41,14 @@
 
       chatSocket.onmessage = function(evt) {
           console.log(evt.data);
+          const newMsg = JSON.parse(evt.data);
+
+          if (newMsg.username != "") {
+            const messages = document.getElementById("messages");
+            const msgHTML = document.createElement("li");
+            msgHTML.innerHTML = `${newMsg.username}: ${newMsg.message}`;
+            messages.append(msgHTML);
+          }
       }
 
       document.getElementById("in").onsubmit = function(evt) {
