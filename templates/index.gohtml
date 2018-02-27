@@ -20,6 +20,7 @@
     <ul id="messages"></ul>
 
     <script>
+      let prevUser = ""
       const users = new Map();
       const chatSocket = new WebSocket(
         "ws://localhost:8080/websocket",
@@ -50,6 +51,10 @@
             const messages = document.getElementById("messages");
             const msgHTML = document.createElement("li");
 
+            if (prevUser !== newMsg.username) {
+                messages.append(document.createElement("hr"));
+            }
+
             msgHTML.innerHTML = `${newMsg.username}: ${newMsg.message}`;
 
             if (users.get(newMsg.username) === undefined) {
@@ -59,6 +64,7 @@
             msgHTML.style.background = users.get(newMsg.username);
 
             messages.append(msgHTML);
+            prevUser = newMsg.username;
           }
       }
 
